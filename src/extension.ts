@@ -37,8 +37,25 @@ function findPythonCells(document: vscode.TextDocument): vscode.Range[] {
 function getCurrentCell(editor: vscode.TextEditor): vscode.Range | undefined {
     const document = editor.document;
     const cursorPosition = editor.selection.active;
+    
+    // Check if cursor is at a cell delimiter line
+    const cursorLine = document.lineAt(cursorPosition.line);
+    const isCursorAtCellMarker = cursorLine.text.trim().startsWith('#%%');
+    
+    // Find all cells in the document
     const cells = findPythonCells(document);
     
+    // Special case: if cursor is at a cell marker, we want this cell, not the previous one
+    if (isCursorAtCellMarker) {
+        // Find the cell that starts at this line
+        for (const cell of cells) {
+            if (cell.start.line === cursorPosition.line) {
+                return cell;
+            }
+        }
+    }
+    
+    // Standard case: find which cell contains the cursor
     for (const cell of cells) {
         if (cell.contains(cursorPosition)) {
             return cell;
