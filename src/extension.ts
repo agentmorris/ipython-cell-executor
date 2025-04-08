@@ -48,7 +48,7 @@ function getCurrentCell(editor: vscode.TextEditor): vscode.Range | undefined {
     return undefined;
 }
 
-// Function to execute code using the clipboard and %paste
+// Function to execute code using the clipboard and %paste -q (quiet mode)
 async function executeViaClipboard(code: string, terminal: vscode.Terminal): Promise<void> {
     try {
         // Write the code to the clipboard
@@ -56,9 +56,9 @@ async function executeViaClipboard(code: string, terminal: vscode.Terminal): Pro
         
         outputChannel.appendLine('Code copied to clipboard for execution');
         
-        // Execute the clipboard contents using %paste
-        outputChannel.appendLine('Executing code with %paste in IPython');
-        terminal.sendText('%paste');
+        // Execute the clipboard contents using %paste -q (quiet mode)
+        outputChannel.appendLine('Executing code with %paste -q in IPython');
+        terminal.sendText('%paste -q');
         
         // Return focus to editor after a short delay
         setTimeout(() => {
@@ -75,6 +75,7 @@ async function executeViaClipboard(code: string, terminal: vscode.Terminal): Pro
         vscode.window.showErrorMessage(`Error executing code: ${error}`);
     }
 }
+
 
 // Function to get or create IPython terminal
 function getOrCreateIPythonTerminal(): vscode.Terminal {

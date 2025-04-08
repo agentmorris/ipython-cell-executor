@@ -1,11 +1,11 @@
 # IPython Cell Executor
 
-A VS Code extension that allows you to execute Python cells in an IPython terminal with atomic execution and debugging support.
+A VS Code extension that allows you to execute Python cells in an IPython terminal with shared namespace between cells.
 
 ## Features
 
 - Execute Python cells (delimited by `#%%`) in an IPython terminal
-- Atomic execution for cells using IPython's file execution capabilities
+- Shared namespace between cells and the IPython terminal (variables and imports persist)
 - Line-by-line execution for selections (perfect for debugging sessions)
 - Automatically creates an IPython terminal if none exists
 - Returns focus to the editor after execution
@@ -48,10 +48,9 @@ When you execute a cell:
 
 1. The extension identifies the cell containing your cursor (delimited by `#%%`)
 2. It removes the cell delimiter line if present
-3. It writes the code to a temporary file
-4. It uses IPython's `%run` magic to execute the file
-5. It cleans up the temporary file automatically
-6. Focus returns to the editor
+3. It copies the code to the clipboard
+4. It uses IPython's `%paste -q` magic to execute the code in the active namespace
+5. Focus returns to the editor
 
 ### Selection Execution
 
@@ -95,7 +94,7 @@ Make sure:
 
 When at a PDB prompt:
 1. Only use `Ctrl+Shift+Enter` with selections
-2. The file-based `Ctrl+Alt+Enter` cell execution won't work in the debugger
+2. The cell execution won't work in the debugger
 
 ## Known Issues
 
@@ -103,6 +102,12 @@ When at a PDB prompt:
 - Some IPython magic commands may not work when sent line-by-line during selection execution
 
 ## Release Notes
+
+### 0.2.0
+
+- Changed cell execution to use the clipboard and `%paste -q` instead of temporary files
+- Now maintains a shared namespace between cells and the IPython terminal
+- Variables and imports persist between cells
 
 ### 0.1.0
 
