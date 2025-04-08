@@ -1,4 +1,4 @@
-// extension.ts - file-based cell execution approach
+// extension.ts - clipboard-based cell execution approach using %paste
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -48,38 +48,17 @@ function getCurrentCell(editor: vscode.TextEditor): vscode.Range | undefined {
     return undefined;
 }
 
-// Generate a temporary file path for the code
-function getTempFilePath(): string {
-    const tempDir = os.tmpdir();
-    const fileName = `ipython_cell_${Date.now()}.py`;
-    return path.join(tempDir, fileName);
-}
-
-// Function to execute code in IPython via a temp file
-async function executeViaFile(code: string, terminal: vscode.Terminal): Promise<void> {
+// Function to execute code using the clipboard and %paste
+async function executeViaClipboard(code: string, terminal: vscode.Terminal): Promise<void> {
     try {
-        // Create a temporary file with the code
-        const filePath = getTempFilePath();
+        // Write the code to the clipboard
+        await vscode.env.clipboard.writeText(code);
         
-        outputChannel.appendLine(`Writing code to temporary file: ${filePath}`);
-        await fs.promises.writeFile(filePath, code, 'utf8');
+        outputChannel.appendLine('Code copied to clipboard for execution');
         
-        // Normalize path for Windows (convert backslashes to forward slashes)
-        const normalizedPath = filePath.replace(/\\/g, '/');
-        
-        // Execute the file in IPython
-        outputChannel.appendLine('Executing file in IPython');
-        terminal.sendText(`%run "${normalizedPath}"`);
-        
-        // Clean up the file after a delay
-        setTimeout(async () => {
-            try {
-                await fs.promises.unlink(filePath);
-                outputChannel.appendLine(`Temporary file removed: ${filePath}`);
-            } catch (error) {
-                outputChannel.appendLine(`Error removing temporary file: ${error}`);
-            }
-        }, 2000);
+        // Execute the clipboard contents using %paste
+        outputChannel.appendLine('Executing code with %paste in IPython');
+        terminal.sendText('%paste');
         
         // Return focus to editor after a short delay
         setTimeout(() => {
@@ -92,7 +71,7 @@ async function executeViaFile(code: string, terminal: vscode.Terminal): Promise<
             }
         }, 300); // Short delay to allow terminal to show output first
     } catch (error) {
-        outputChannel.appendLine(`Error executing via file: ${error}`);
+        outputChannel.appendLine(`Error executing via clipboard: ${error}`);
         vscode.window.showErrorMessage(`Error executing code: ${error}`);
     }
 }
@@ -114,7 +93,7 @@ function getOrCreateIPythonTerminal(): vscode.Terminal {
     return newTerminal;
 }
 
-// Function to execute current cell with file-based approach
+// Function to execute current cell with clipboard-based approach
 async function executeCurrentCell() {
     outputChannel.appendLine('==== executeCurrentCell called ====');
     
@@ -154,8 +133,8 @@ async function executeCurrentCell() {
     const terminal = getOrCreateIPythonTerminal();
     terminal.show();
     
-    // Execute via file instead of direct paste
-    await executeViaFile(codeToExecute, terminal);
+    // Execute via clipboard using %paste
+    await executeViaClipboard(codeToExecute, terminal);
     
     outputChannel.appendLine('==== executeCurrentCell completed ====');
 }
