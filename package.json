@@ -1,0 +1,64 @@
+{
+  "name": "ipython-cell-executor",
+  "displayName": "IPython Cell Executor",
+  "description": "Execute Python cells in IPython terminal with atomic execution",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:python"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "ipython-cell-executor.executeCell",
+        "title": "IPython: Execute Current Cell in Terminal"
+      },
+      {
+        "command": "ipython-cell-executor.executeSelection",
+        "title": "IPython: Execute Current Selection in Terminal"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "ipython-cell-executor.executeCell",
+        "key": "ctrl+alt+enter",
+        "when": "editorLangId == python && editorTextFocus"
+      },
+      {
+        "command": "ipython-cell-executor.executeSelection",
+        "key": "ctrl+shift+enter",
+        "when": "editorLangId == python && editorTextFocus && editorHasSelection"
+      }
+    ],
+    "configuration": {
+      "title": "IPython Cell Executor",
+      "properties": {
+        "ipythonCellExecutor.terminalName": {
+          "type": "string",
+          "default": "IPython",
+          "description": "Name of the IPython terminal to use"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "^16.11.7",
+    "@types/vscode": "^1.74.0",
+    "@typescript-eslint/eslint-plugin": "^5.30.0",
+    "@typescript-eslint/parser": "^5.30.0",
+    "eslint": "^8.13.0",
+    "typescript": "^4.7.2"
+  }
+}
