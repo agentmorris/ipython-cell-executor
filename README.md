@@ -60,11 +60,40 @@ When you execute a selection (useful during debugging):
 2. This works even when you're at a PDB or IPDB prompt
 3. Focus returns to the editor after execution
 
-### Debugging Workflow
+## PDB Mode Support
+
+When debugging with PDB or IPDB, you can toggle "PDB Mode" to improve how code is executed:
+
+- Use `Ctrl+Alt+,` to toggle between regular IPython mode and PDB mode
+- In PDB mode, cell execution (`Ctrl+Alt+Enter`) uses the file-based method that preserves indentation
+- A status bar indicator shows whether you're in "IPython Mode" or "PDB Mode"
+
+### Selection Execution in PDB Mode
+
+When in PDB mode, selection execution (`Ctrl+Shift+Enter`) has smart behavior:
+
+- For single-line expressions (e.g., variable names), it sends the expression directly to the terminal
+  - This allows you to see the values of variables by simply selecting and executing them
+- For multi-line code or statements with control structures, it uses the file-based execution method
+  - This preserves indentation and allows complex code blocks to execute properly
+
+### Indentation Handling
+
+The extension automatically handles indented code blocks:
+
+- When executing code in PDB mode, the extension normalizes indentation automatically
+- This means you can select and execute code that's indented within functions or classes
+- The relative indentation structure is preserved, while making the code valid for execution
+- This works for both cells and selections when in PDB mode
+
+### Debugging Workflow:
 
 1. Execute cells with `Ctrl+Alt+Enter` during normal development
-2. When you hit a breakpoint (using `pdb.set_trace()`, `breakpoint()`, etc.)
-3. Use `Ctrl+Shift+Enter` with selected text to execute code line-by-line in the debugger context
+2. When you hit a breakpoint (using `pdb.set_trace()`, `breakpoint()`, etc.), switch to PDB mode with `Ctrl+Alt+,`
+3. Use the selection execution method that fits your current need:
+   - Select a variable name and press `Ctrl+Shift+Enter` to see its value
+   - Select a multi-line code block and press `Ctrl+Shift+Enter` to execute it with proper indentation
+4. When you exit PDB, switch back to regular mode with `Ctrl+Alt+,`
 
 ## Customization
 
@@ -89,29 +118,3 @@ Make sure:
 1. Your cursor is inside a Python cell
 2. IPython is properly installed in your environment
 3. Your code doesn't contain syntax errors
-
-### Debugging Issues
-
-When at a PDB prompt:
-1. Only use `Ctrl+Shift+Enter` with selections
-2. The cell execution won't work in the debugger
-
-## Known Issues
-
-- Code execution while at a PDB prompt only works with selection execution (`Ctrl+Shift+Enter`)
-- Some IPython magic commands may not work when sent line-by-line during selection execution
-
-## Release Notes
-
-### 0.2.0
-
-- Changed cell execution to use the clipboard and `%paste -q` instead of temporary files
-- Now maintains a shared namespace between cells and the IPython terminal
-- Variables and imports persist between cells
-
-### 0.1.0
-
-- Initial release
-- Support for cell execution with atomic execution
-- Support for selection execution for debugging scenarios
-- Automatic focus return to editor

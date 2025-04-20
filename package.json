@@ -2,7 +2,7 @@
   "name": "ipython-cell-executor",
   "displayName": "IPython Cell Executor",
   "description": "Execute Python cells in IPython terminal with atomic execution",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "engines": {
     "vscode": "^1.74.0"
   },
@@ -22,7 +22,11 @@
       {
         "command": "ipython-cell-executor.executeSelection",
         "title": "IPython: Execute Current Selection in Terminal"
-      }
+      },
+      {
+      "command": "ipython-cell-executor.togglePdbMode",
+      "title": "IPython: Toggle PDB Mode"
+      }    
     ],
     "keybindings": [
       {
@@ -34,6 +38,12 @@
         "command": "ipython-cell-executor.executeSelection",
         "key": "ctrl+shift+enter",
         "when": "editorLangId == python && editorTextFocus && editorHasSelection"
+      },
+      {
+        "command": "ipython-cell-executor.togglePdbMode",
+        "key": "ctrl+alt+,",
+        "mac": "cmd+alt+,",
+        "when": "editorTextFocus && editorLangId == 'python'"
       }
     ],
     "configuration": {

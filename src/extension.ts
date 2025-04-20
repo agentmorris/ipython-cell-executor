@@ -7,6 +7,12 @@ import * as os from 'os';
 // Add output channel for debugging
 const outputChannel = vscode.window.createOutputChannel('IPython Cell Executor');
 
+// Track pdb mode state
+let inPdbMode = false;
+
+// Status bar item to show current mode
+let statusBarItem: vscode.StatusBarItem;
+
 // Utility function to find Python cells in a document
 function findPythonCells(document: vscode.TextDocument): vscode.Range[] {
     const cellDelimiter = '#%%';
@@ -93,7 +99,6 @@ async function executeViaClipboard(code: string, terminal: vscode.Terminal): Pro
     }
 }
 
-
 // Function to get or create IPython terminal
 function getOrCreateIPythonTerminal(): vscode.Terminal {
     const terminals = vscode.window.terminals;
@@ -151,14 +156,23 @@ async function executeCurrentCell() {
     const terminal = getOrCreateIPythonTerminal();
     terminal.show();
     
-    // Execute via clipboard using %paste
-    await executeViaClipboard(codeToExecute, terminal);
+    // Execute differently based on mode
+    if (inPdbMode) {
+        outputChannel.appendLine('Using PDB mode execution (temp file) for cell');
+        await executeThroughTempFileInPdb(codeToExecute, terminal);
+    } else {
+        // Regular execution via clipboard using %paste
+        outputChannel.appendLine('Using standard IPython execution (clipboard) for cell');
+        await executeViaClipboard(codeToExecute, terminal);
+    }
     
     outputChannel.appendLine('==== executeCurrentCell completed ====');
 }
 
 // Function to send code to IPython terminal line by line
 function sendToIPythonTerminalLineByLine(code: string, terminal: vscode.Terminal) {
+    outputChannel.appendLine('==== sendToIPythonTerminalLineByLine called ====');
+    
     // Split the code into lines
     const lines = code.split('\n');
     
@@ -182,10 +196,110 @@ function sendToIPythonTerminalLineByLine(code: string, terminal: vscode.Terminal
             );
         }
     }, 300); // Short delay to allow terminal to show output first
+    
+    outputChannel.appendLine('==== sendToIPythonTerminalLineByLine completed ====');
 }
 
-// Function to execute current selection directly
+// Function to execute selection in pdb via temporary file
+async function executeThroughTempFileInPdb(code: string, terminal: vscode.Terminal): Promise<void> {
+    outputChannel.appendLine('==== executeThroughTempFileInPdb called ====');
+    
+    // Normalize indentation before execution
+    const normalizedCode = normalizeIndentation(code);
+    outputChannel.appendLine('Normalized indentation for PDB execution');
+    
+    // Create a temp file with the normalized code
+    const tmpDir = os.tmpdir();
+    const tmpFilePath = path.join(tmpDir, `pdb_exec_${Date.now()}.py`);
+    
+    try {
+        // Write the code to a temp file
+        fs.writeFileSync(tmpFilePath, normalizedCode);
+        outputChannel.appendLine(`Code written to temporary file: ${tmpFilePath}`);
+        
+        // In pdb, execute the file
+        // Use backslash escaping for Windows paths
+        const escapedPath = tmpFilePath.replace(/\\/g, '\\\\');
+        terminal.sendText(`exec(open('${escapedPath}').read())`);
+        outputChannel.appendLine(`Sent exec command to terminal for file: ${escapedPath}`);
+        
+        // Return focus to editor after execution
+        setTimeout(() => {
+            if (vscode.window.activeTextEditor) {
+                vscode.window.showTextDocument(
+                    vscode.window.activeTextEditor.document, 
+                    vscode.window.activeTextEditor.viewColumn
+                );
+            }
+        }, 300);
+    } catch (error) {
+        outputChannel.appendLine(`Error executing via temp file: ${error}`);
+        vscode.window.showErrorMessage(`Error executing code: ${error}`);
+    } finally {
+        // Clean up the temp file after a delay
+        setTimeout(() => {
+            try {
+                if (fs.existsSync(tmpFilePath)) {
+                    fs.unlinkSync(tmpFilePath);
+                    outputChannel.appendLine(`Removed temporary file: ${tmpFilePath}`);
+                }
+            } catch (err) {
+                outputChannel.appendLine(`Error removing temp file: ${err}`);
+            }
+        }, 1000);
+    }
+    
+    outputChannel.appendLine('==== executeThroughTempFileInPdb completed ====');
+}
+
+// Function to normalize indentation in code
+function normalizeIndentation(code: string): string {
+    // Split the code into lines
+    const lines = code.split('\n');
+    
+    // Find the minimum indentation level (number of leading spaces or tabs)
+    let minIndent = Number.MAX_SAFE_INTEGER;
+    
+    // Examine each non-empty line
+    for (const line of lines) {
+        // Skip empty lines
+        if (line.trim().length === 0) {
+            continue;
+        }
+        
+        // Count leading whitespace
+        const leadingWhitespace = line.length - line.trimLeft().length;
+        
+        // Update minimum indentation
+        if (leadingWhitespace < minIndent) {
+            minIndent = leadingWhitespace;
+        }
+    }
+    
+    // If all lines are empty or no common indentation was found
+    if (minIndent === Number.MAX_SAFE_INTEGER) {
+        minIndent = 0;
+    }
+    
+    // Remove the common indentation from each line
+    const normalizedLines = lines.map(line => {
+        // Skip empty lines
+        if (line.trim().length === 0) {
+            return line;
+        }
+        
+        // Remove exactly the minimum indentation
+        return line.substring(minIndent);
+    });
+    
+    // Join the normalized lines back together
+    return normalizedLines.join('\n');
+}
+
+// Function to execute current selection with pdb awareness
 async function executeCurrentSelection() {
+    outputChannel.appendLine('==== executeCurrentSelection called ====');
+    
     const editor = vscode.window.activeTextEditor;
     if (!editor || editor.document.languageId !== 'python') {
         vscode.window.showErrorMessage('No active Python editor found');
@@ -202,12 +316,77 @@ async function executeCurrentSelection() {
     const terminal = getOrCreateIPythonTerminal();
     terminal.show();
     
-    // For selections, use line-by-line execution
-    sendToIPythonTerminalLineByLine(selectedText, terminal);
+    // Special case for single expressions in PDB mode
+    const isSingleLine = !selectedText.includes('\n');
+    const isExpression = !selectedText.includes('=') && 
+                          !selectedText.includes(':') && 
+                          !selectedText.trim().startsWith('def ') &&
+                          !selectedText.trim().startsWith('class ') &&
+                          !selectedText.trim().startsWith('if ') &&
+                          !selectedText.trim().startsWith('for ') &&
+                          !selectedText.trim().startsWith('while ');
+    
+    if (inPdbMode) {
+        if (isSingleLine && isExpression) {
+            // For single expressions in PDB mode, use direct line execution
+            // This allows viewing variable values
+            outputChannel.appendLine('Using direct execution for single expression in PDB mode');
+            terminal.sendText(selectedText);
+            
+            // Return focus to editor after a short delay
+            setTimeout(() => {
+                if (vscode.window.activeTextEditor) {
+                    vscode.window.showTextDocument(
+                        vscode.window.activeTextEditor.document, 
+                        vscode.window.activeTextEditor.viewColumn
+                    );
+                }
+            }, 300);
+        } else {
+            // For multi-line code in PDB mode, use exec()
+            outputChannel.appendLine('Using PDB mode execution (temp file)');
+            await executeThroughTempFileInPdb(selectedText, terminal);
+        }
+    } else {
+        // In IPython mode, always use line-by-line
+        outputChannel.appendLine('Using standard IPython execution (line-by-line)');
+        sendToIPythonTerminalLineByLine(selectedText, terminal);
+    }
+    
+    outputChannel.appendLine('==== executeCurrentSelection completed ====');
+}
+
+// Function to toggle pdb mode
+function togglePdbMode() {
+    inPdbMode = !inPdbMode;
+    outputChannel.appendLine(`PDB mode ${inPdbMode ? 'enabled' : 'disabled'}`);
+    // No pop-up message, only status bar indicator
+    
+    // Update status bar to indicate current mode
+    updateStatusBar();
+}
+
+// Create and update status bar
+function createStatusBar(context: vscode.ExtensionContext) {
+    statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+    context.subscriptions.push(statusBarItem);
+    updateStatusBar();
+    statusBarItem.show();
+}
+
+// Update status bar text based on mode
+function updateStatusBar() {
+    statusBarItem.text = inPdbMode ? "$(debug) PDB Mode" : "$(terminal) IPython Mode";
+    statusBarItem.tooltip = inPdbMode ? 
+        "Using file-based execution for PDB" : 
+        "Using line-by-line execution for IPython";
 }
 
 // Activate extension
 export function activate(context: vscode.ExtensionContext) {
+    // Create status bar
+    createStatusBar(context);
+    
     // Register commands
     const cellCommand = vscode.commands.registerCommand(
         'ipython-cell-executor.executeCell', 
@@ -219,8 +398,18 @@ export function activate(context: vscode.ExtensionContext) {
         executeCurrentSelection
     );
     
-    context.subscriptions.push(cellCommand, selectionCommand);
+    const toggleCommand = vscode.commands.registerCommand(
+        'ipython-cell-executor.togglePdbMode', 
+        togglePdbMode
+    );
+    
+    // Add all commands to subscriptions
+    context.subscriptions.push(cellCommand, selectionCommand, toggleCommand);
+    
+    outputChannel.appendLine('IPython Cell Executor extension activated');
 }
 
 // Deactivate extension
-export function deactivate() {}
+export function deactivate() {
+    outputChannel.appendLine('IPython Cell Executor extension deactivated');
+}
