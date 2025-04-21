@@ -200,7 +200,7 @@ function sendToIPythonTerminalLineByLine(code: string, terminal: vscode.Terminal
     }
     
     // Add a newline at the end to ensure execution
-    terminal.sendText('');
+    // terminal.sendText('');
     
     // Return focus to editor after a short delay
     setTimeout(() => {
