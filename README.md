@@ -18,6 +18,15 @@ A VS Code extension that allows you to execute Python cells in an IPython termin
 
 ## Installation
 
+### From VSIX File
+
+1. Download the `.vsix` file
+2. Open VS Code
+3. Go to Extensions view (Ctrl+Shift+X)
+4. Click the "..." menu at the top of the Extensions view
+5. Select "Install from VSIX..."
+6. Navigate to and select the `.vsix` file
+
 ### From Source
 
 1. Clone this repository

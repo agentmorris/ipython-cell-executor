@@ -81,8 +81,12 @@ async function executeViaClipboard(code: string, terminal: vscode.Terminal): Pro
         
         // Execute the clipboard contents using %paste -q (quiet mode)
         outputChannel.appendLine('Executing code with %paste -q in IPython');
-        terminal.sendText('%paste -q');
+        terminal.sendText('%paste -q', false);
         
+        setTimeout(() => {
+            terminal.sendText('', true); // Explicitly add line ending
+        }, 100);
+
         // Return focus to editor after a short delay
         setTimeout(() => {
             // Focus the active text editor
@@ -186,7 +190,12 @@ function sendToIPythonTerminalLineByLine(code: string, terminal: vscode.Terminal
     // Send each line individually
     for (const line of lines) {
         if (line.trim()) {  // Only send non-empty lines
-            terminal.sendText(line);
+            // Try sending without automatic line ending
+            terminal.sendText(line, false);
+            // Then explicitly send the line ending
+            setTimeout(() => {
+                terminal.sendText('', true);
+            }, 10);
         }
     }
     
