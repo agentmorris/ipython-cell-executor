@@ -2,7 +2,7 @@
   "name": "ipython-cell-executor",
   "displayName": "IPython Cell Executor",
   "description": "Execute Python cells in IPython terminal with atomic execution",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "engines": {
     "vscode": "^1.74.0"
   },

@@ -101,11 +101,18 @@ async function executeViaClipboard(code: string, terminal: vscode.Terminal): Pro
 
 // Function to get or create IPython terminal
 function getOrCreateIPythonTerminal(): vscode.Terminal {
-    const terminals = vscode.window.terminals;
+    // First check if the active terminal is an IPython terminal
+    const activeTerminal = vscode.window.activeTerminal;
+    if (activeTerminal && activeTerminal.name.toLowerCase().includes('ipython')) {
+        return activeTerminal;
+    }
     
-    // Look for existing IPython terminal
+    // If active terminal is not an IPython terminal, look for any IPython terminal
+    const terminals = vscode.window.terminals;
     for (const terminal of terminals) {
-        if (terminal.name.includes('IPython')) {
+        if (terminal.name.toLowerCase().includes('ipython')) {
+            // We found an IPython terminal, make it visible and return it
+            terminal.show();
             return terminal;
         }
     }
