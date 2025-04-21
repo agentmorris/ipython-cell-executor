@@ -187,5 +187,11 @@
   "bugs": {
     "url": "https://github.com/agentmorris/ipython-cell-executor/issues"
   },
-  "homepage": "https://github.com/agentmorris/ipython-cell-executor#readme"
+  "homepage": "https://github.com/agentmorris/ipython-cell-executor#readme",
+  "files": [
+  "out/**",
+  "LICENSE",
+  "README.md",
+  "package.json"
+  ]
 }
