@@ -170,7 +170,8 @@ async function executeCurrentCell() {
     // Execute differently based on mode
     if (inPdbMode) {
         outputChannel.appendLine('Using PDB mode execution (temp file) for cell');
-        await executeThroughTempFileInPdb(codeToExecute, terminal);
+        // await executeThroughTempFileInPdb(codeToExecute, terminal);
+		await executeLineByLineInPdb(codeToExecute, terminal);
     } else {
         // Regular execution via clipboard using %paste
         outputChannel.appendLine('Using standard IPython execution (clipboard) for cell');
@@ -233,11 +234,11 @@ async function executeThroughTempFileInPdb(code: string, terminal: vscode.Termin
         fs.writeFileSync(tmpFilePath, normalizedCode);
         outputChannel.appendLine(`Code written to temporary file: ${tmpFilePath}`);
         
-        // In pdb, execute the file
+        // In pdb, use the 'source' command instead of exec()
         // Use backslash escaping for Windows paths
         const escapedPath = tmpFilePath.replace(/\\/g, '\\\\');
-        terminal.sendText(`exec(open('${escapedPath}').read())`);
-        outputChannel.appendLine(`Sent exec command to terminal for file: ${escapedPath}`);
+        terminal.sendText(`source ${escapedPath}`);
+        outputChannel.appendLine(`Sent source command to terminal for file: ${escapedPath}`);
         
         // Return focus to editor after execution
         setTimeout(() => {
@@ -312,6 +313,82 @@ function normalizeIndentation(code: string): string {
     return normalizedLines.join('\n');
 }
 
+// Function to execute code line by line in PDB mode
+async function executeLineByLineInPdb(code: string, terminal: vscode.Terminal): Promise<void> {
+    outputChannel.appendLine('==== executeLineByLineInPdb called ====');
+    
+    // Normalize indentation before execution
+    const normalizedCode = normalizeIndentation(code);
+    outputChannel.appendLine('Normalized indentation for PDB execution');
+    
+    // Handle line continuation (backslash at end of line)
+    const expandedCode = expandLineContinuations(normalizedCode);
+    outputChannel.appendLine('Expanded line continuations for PDB execution');
+    
+    // Split the code into lines
+    const lines = expandedCode.split('\n');
+    
+    // Send each line individually to maintain scope
+    for (const line of lines) {
+        if (line.trim()) {  // Only send non-empty lines
+            outputChannel.appendLine(`Sending line to PDB: "${line}"`);
+            
+            // Send the line without automatic line ending
+            terminal.sendText(line, false);
+            
+            // Then explicitly send the line ending
+            await new Promise(resolve => setTimeout(resolve, 50));
+            terminal.sendText('', true);
+            
+            // Allow more time for PDB to process the line
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+    }
+    
+    // Return focus to editor after execution
+    setTimeout(() => {
+        if (vscode.window.activeTextEditor) {
+            vscode.window.showTextDocument(
+                vscode.window.activeTextEditor.document, 
+                vscode.window.activeTextEditor.viewColumn
+            );
+        }
+    }, 300);
+    
+    outputChannel.appendLine('==== executeLineByLineInPdb completed ====');
+}
+
+// Function to expand line continuations (backslash at end of line)
+function expandLineContinuations(code: string): string {
+    const lines = code.split('\n');
+    const expandedLines: string[] = [];
+    let currentLine = '';
+    
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        
+        // Check if the line ends with a backslash (line continuation)
+        if (line.trim().endsWith('\\')) {
+            // Remove the backslash and append to the current line
+            currentLine += line.slice(0, line.lastIndexOf('\\')).trimRight();
+        } else if (currentLine) {
+            // This is the last line of a continuation - append and reset
+            currentLine += line;
+            expandedLines.push(currentLine);
+            currentLine = '';
+        } else {
+            // Normal line with no continuation
+            expandedLines.push(line);
+        }
+    }
+    
+    // In case the last line had a continuation but there were no more lines
+    if (currentLine) {
+        expandedLines.push(currentLine);
+    }
+    
+    return expandedLines.join('\n');
+}
 // Function to execute current selection with pdb awareness
 async function executeCurrentSelection() {
     outputChannel.appendLine('==== executeCurrentSelection called ====');
@@ -361,7 +438,8 @@ async function executeCurrentSelection() {
         } else {
             // For multi-line code in PDB mode, use exec()
             outputChannel.appendLine('Using PDB mode execution (temp file)');
-            await executeThroughTempFileInPdb(selectedText, terminal);
+            // await executeThroughTempFileInPdb(selectedText, terminal);
+			await executeLineByLineInPdb(selectedText, terminal);
         }
     } else {
         // In IPython mode, always use line-by-line

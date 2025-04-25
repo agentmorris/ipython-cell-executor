@@ -74,7 +74,7 @@ When you execute a selection (useful during debugging):
 When debugging with PDB or IPDB, you can toggle "PDB Mode" to improve how code is executed:
 
 - Use `Ctrl+Alt+,` to toggle between regular IPython mode and PDB mode
-- In PDB mode, cell execution (`Ctrl+Alt+Enter`) uses the file-based method that preserves indentation
+- In PDB mode, the extension uses specialized line-by-line execution that preserves variable scope and state
 - A status bar indicator shows whether you're in "IPython Mode" or "PDB Mode"
 
 ### Selection Execution in PDB Mode
@@ -83,17 +83,18 @@ When in PDB mode, selection execution (`Ctrl+Shift+Enter`) has smart behavior:
 
 - For single-line expressions (e.g., variable names), it sends the expression directly to the terminal
   - This allows you to see the values of variables by simply selecting and executing them
-- For multi-line code or statements with control structures, it uses the file-based execution method
-  - This preserves indentation and allows complex code blocks to execute properly
+- For multi-line code or statements with control structures, it uses a specialized line-by-line execution
+  - This preserves your PDB session state and allows complex code blocks to execute properly
+  - Variables defined in executed code blocks will be available in your PDB session
 
 ### Indentation Handling
 
 The extension automatically handles indented code blocks:
 
-- When executing code in PDB mode, the extension normalizes indentation automatically
+- When executing code in PDB mode, the extension normalizes indentation before sending it line-by-line
 - This means you can select and execute code that's indented within functions or classes
-- The relative indentation structure is preserved, while making the code valid for execution
-- This works for both cells and selections when in PDB mode
+- The extension also handles line continuations (backslash at the end of a line)
+- These formatting improvements ensure your code executes correctly within the PDB session
 
 ### Debugging Workflow:
 
@@ -103,6 +104,8 @@ The extension automatically handles indented code blocks:
    - Select a variable name and press `Ctrl+Shift+Enter` to see its value
    - Select a multi-line code block and press `Ctrl+Shift+Enter` to execute it with proper indentation
 4. When you exit PDB, switch back to regular mode with `Ctrl+Alt+,`
+5. All variables defined during PDB mode execution will be available in your debugging session
+
 
 ## Customization
 
