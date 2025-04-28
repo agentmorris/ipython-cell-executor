@@ -1,8 +1,9 @@
 {
   "name": "ipython-cell-executor",
   "displayName": "IPython Cell Executor",
+  "publisher": "agentmorris",
   "description": "Execute Python cells in IPython terminal with atomic execution",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "engines": {
     "vscode": "^1.99.0"
   },
@@ -189,9 +190,8 @@
   },
   "homepage": "https://github.com/agentmorris/ipython-cell-executor#readme",
   "files": [
-  "out/**",
-  "LICENSE",
-  "README.md",
-  "package.json"
+    "out/**",
+    "README.md",
+    "package.json"
   ]
 }

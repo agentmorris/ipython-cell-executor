@@ -127,7 +127,7 @@ function getOrCreateIPythonTerminal(): vscode.Terminal {
     return newTerminal;
 }
 
-// Function to execute current cell with clipboard-based approach
+// Function to execute current cell or selection with clipboard-based approach
 async function executeCurrentCell() {
     outputChannel.appendLine('==== executeCurrentCell called ====');
     
@@ -137,26 +137,38 @@ async function executeCurrentCell() {
         return;
     }
     
-    const currentCell = getCurrentCell(editor);
-    if (!currentCell) {
-        vscode.window.showErrorMessage('No Python cell found at cursor position');
-        return;
+    // Check if there's a selection first
+    const selection = editor.selection;
+    let codeToExecute: string;
+    
+    if (!selection.isEmpty) {
+        // If there's a selection, use that instead of finding the cell
+        outputChannel.appendLine('Selection found, using selection instead of cell');
+        codeToExecute = editor.document.getText(selection);
+    } else {
+        // No selection, proceed with cell-based execution
+        outputChannel.appendLine('No selection found, using current cell');
+        const currentCell = getCurrentCell(editor);
+        if (!currentCell) {
+            vscode.window.showErrorMessage('No Python cell found at cursor position');
+            return;
+        }
+        
+        // Get the entire cell text
+        const cellText = editor.document.getText(currentCell);
+        
+        // Split into lines for processing
+        const cellLines = cellText.split('\n');
+        
+        // Skip the cell delimiter line if present
+        let codeLines = cellLines;
+        if (cellLines.length > 0 && cellLines[0].trim().startsWith('#%%')) {
+            codeLines = cellLines.slice(1);
+        }
+        
+        // Join the remaining lines back together for execution
+        codeToExecute = codeLines.join('\n');
     }
-    
-    // Get the entire cell text
-    const cellText = editor.document.getText(currentCell);
-    
-    // Split into lines for processing
-    const cellLines = cellText.split('\n');
-    
-    // Skip the cell delimiter line if present
-    let codeLines = cellLines;
-    if (cellLines.length > 0 && cellLines[0].trim().startsWith('#%%')) {
-        codeLines = cellLines.slice(1);
-    }
-    
-    // Join the remaining lines back together for execution
-    const codeToExecute = codeLines.join('\n');
     
     outputChannel.appendLine(`Code to execute (${codeToExecute.length} chars):`);
     outputChannel.appendLine('---CODE START---');
@@ -171,7 +183,7 @@ async function executeCurrentCell() {
     if (inPdbMode) {
         outputChannel.appendLine('Using PDB mode execution (temp file) for cell');
         // await executeThroughTempFileInPdb(codeToExecute, terminal);
-		await executeLineByLineInPdb(codeToExecute, terminal);
+        await executeLineByLineInPdb(codeToExecute, terminal);
     } else {
         // Regular execution via clipboard using %paste
         outputChannel.appendLine('Using standard IPython execution (clipboard) for cell');

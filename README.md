@@ -63,7 +63,7 @@ When you execute a cell:
 
 ### Selection Execution
 
-When you execute a selection (useful during debugging):
+When you execute a selection:
 
 1. The extension sends each line of your selected code individually to the IPython terminal
 2. This works even when you're at a PDB or IPDB prompt
