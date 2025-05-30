@@ -103,8 +103,24 @@ async function executeViaClipboard(code: string, terminal: vscode.Terminal): Pro
     }
 }
 
-// Function to get or create IPython terminal
+// Function to get or create an IPython terminal
 function getOrCreateIPythonTerminal(): vscode.Terminal {
+
+    // Run in the the current terminal (without checking whether it's an IPython
+    // terminal), or created a new one if necessary
+    const activeTerminal = vscode.window.activeTerminal;
+    if (activeTerminal) {
+        return activeTerminal;
+    }
+    
+    // Create a new IPython terminal if none exists
+    const newTerminal = vscode.window.createTerminal('IPython');
+    newTerminal.sendText('ipython');
+    return newTerminal;
+    
+    // Previous behavior, commenting but keeping for posterity: look
+    // for a terminal with "ipython" in the name.
+    /*
     // First check if the active terminal is an IPython terminal
     const activeTerminal = vscode.window.activeTerminal;
     if (activeTerminal && activeTerminal.name.toLowerCase().includes('ipython')) {
@@ -125,6 +141,7 @@ function getOrCreateIPythonTerminal(): vscode.Terminal {
     const newTerminal = vscode.window.createTerminal('IPython');
     newTerminal.sendText('ipython');
     return newTerminal;
+    */
 }
 
 // Function to execute current cell or selection with clipboard-based approach
