@@ -3,7 +3,7 @@
   "displayName": "IPython Cell Executor",
   "publisher": "agentmorris",
   "description": "Execute Python cells in IPython terminal with atomic execution",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "engines": {
     "vscode": "^1.99.0"
   },

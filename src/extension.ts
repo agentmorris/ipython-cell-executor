@@ -71,18 +71,37 @@ function getCurrentCell(editor: vscode.TextEditor): vscode.Range | undefined {
     return undefined;
 }
 
+// Function to extract cell name from the #%% line
+function getCellName(cellText: string): string | undefined {
+    const lines = cellText.split('\n');
+    if (lines.length > 0) {
+        const firstLine = lines[0].trim();
+        if (firstLine.startsWith('#%%')) {
+            const cellName = firstLine.substring(3).trim(); // Remove '#%%' and trim
+            return cellName.length > 0 ? cellName : undefined;
+        }
+    }
+    return undefined;
+}
+
 // Function to execute code using the clipboard and %paste -q (quiet mode)
-async function executeViaClipboard(code: string, terminal: vscode.Terminal): Promise<void> {
+async function executeViaClipboard(code: string, terminal: vscode.Terminal, cellName?: string): Promise<void> {
     try {
         // Write the code to the clipboard
         await vscode.env.clipboard.writeText(code);
-        
+
         outputChannel.appendLine('Code copied to clipboard for execution');
-        
+
+        // Display cell name as a comment if provided
+        if (cellName) {
+            outputChannel.appendLine(`Displaying cell name: ${cellName}`);
+            terminal.sendText(`# ${cellName}`, true);
+        }
+
         // Execute the clipboard contents using %paste -q (quiet mode)
         outputChannel.appendLine('Executing code with %paste -q in IPython');
         terminal.sendText('%paste -q', false);
-        
+
         setTimeout(() => {
             terminal.sendText('', true); // Explicitly add line ending
         }, 100);
@@ -157,11 +176,13 @@ async function executeCurrentCell() {
     // Check if there's a selection first
     const selection = editor.selection;
     let codeToExecute: string;
-    
+    let cellName: string | undefined;
+
     if (!selection.isEmpty) {
         // If there's a selection, use that instead of finding the cell
         outputChannel.appendLine('Selection found, using selection instead of cell');
         codeToExecute = editor.document.getText(selection);
+        cellName = undefined; // No cell name for selections
     } else {
         // No selection, proceed with cell-based execution
         outputChannel.appendLine('No selection found, using current cell');
@@ -170,19 +191,22 @@ async function executeCurrentCell() {
             vscode.window.showErrorMessage('No Python cell found at cursor position');
             return;
         }
-        
+
         // Get the entire cell text
         const cellText = editor.document.getText(currentCell);
-        
+
+        // Extract cell name before processing the code
+        cellName = getCellName(cellText);
+
         // Split into lines for processing
         const cellLines = cellText.split('\n');
-        
+
         // Skip the cell delimiter line if present
         let codeLines = cellLines;
         if (cellLines.length > 0 && cellLines[0].trim().startsWith('#%%')) {
             codeLines = cellLines.slice(1);
         }
-        
+
         // Join the remaining lines back together for execution
         codeToExecute = codeLines.join('\n');
     }
@@ -204,7 +228,7 @@ async function executeCurrentCell() {
     } else {
         // Regular execution via clipboard using %paste
         outputChannel.appendLine('Using standard IPython execution (clipboard) for cell');
-        await executeViaClipboard(codeToExecute, terminal);
+        await executeViaClipboard(codeToExecute, terminal, cellName);
     }
     
     outputChannel.appendLine('==== executeCurrentCell completed ====');

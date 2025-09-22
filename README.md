@@ -32,7 +32,7 @@ A VS Code extension that allows you to execute Python cells in an IPython termin
 1. Clone this repository
 2. Run `npm install` to install dependencies
 3. Run `npm run compile` to build the extension
-4. Package the extension: `vsce package --allow-missing-repository`
+4. Package the extension: `vsce package --allow-missing-repository --skip-license`
 5. Install the resulting `.vsix` file in VS Code using "Install from VSIX..."
 
 ## Usage
