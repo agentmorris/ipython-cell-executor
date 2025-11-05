@@ -18,7 +18,11 @@ A VS Code extension that allows you to execute Python cells in an IPython termin
 
 ## Installation
 
-### From VSIX File
+### From the VS Code marketplace (recommended)
+
+This extension is available on the VS Code Marketplace [here](https://marketplace.visualstudio.com/items?itemName=agentmorris.ipython-cell-executor).
+
+### From VSIX file
 
 1. Download the `.vsix` file
 2. Open VS Code
@@ -27,7 +31,7 @@ A VS Code extension that allows you to execute Python cells in an IPython termin
 5. Select "Install from VSIX..."
 6. Navigate to and select the `.vsix` file
 
-### From Source
+### From source
 
 1. Clone this repository
 2. Run `npm install` to install dependencies
@@ -37,7 +41,7 @@ A VS Code extension that allows you to execute Python cells in an IPython termin
 
 ## Usage
 
-### Key Bindings
+### Key bindings
 
 - `Ctrl+Alt+Enter`: Execute the current cell in the IPython terminal
 - `Ctrl+Shift+Enter`: Execute the current selection in the IPython terminal (line-by-line)
@@ -49,9 +53,9 @@ You can also use the Command Palette (`Ctrl+Shift+P`) to run the following comma
 - `IPython: Execute Current Cell in Terminal`
 - `IPython: Execute Current Selection in Terminal`
 
-## How It Works
+## How it works
 
-### Cell Execution
+### Cell execution
 
 When you execute a cell:
 
@@ -61,7 +65,7 @@ When you execute a cell:
 4. It uses IPython's `%paste -q` magic to execute the code in the active namespace
 5. Focus returns to the editor
 
-### Selection Execution
+### Selection execution
 
 When you execute a selection:
 
@@ -69,7 +73,7 @@ When you execute a selection:
 2. This works even when you're at a PDB or IPDB prompt
 3. Focus returns to the editor after execution
 
-## PDB Mode Support
+## PDB mode support
 
 When debugging with PDB or IPDB, you can toggle "PDB Mode" to improve how code is executed:
 
@@ -77,7 +81,7 @@ When debugging with PDB or IPDB, you can toggle "PDB Mode" to improve how code i
 - In PDB mode, the extension uses specialized line-by-line execution that preserves variable scope and state
 - A status bar indicator shows whether you're in "IPython Mode" or "PDB Mode"
 
-### Selection Execution in PDB Mode
+### Selection execution in PDB mode
 
 When in PDB mode, selection execution (`Ctrl+Shift+Enter`) has smart behavior:
 
@@ -87,7 +91,7 @@ When in PDB mode, selection execution (`Ctrl+Shift+Enter`) has smart behavior:
   - This preserves your PDB session state and allows complex code blocks to execute properly
   - Variables defined in executed code blocks will be available in your PDB session
 
-### Indentation Handling
+### Indentation handling
 
 The extension automatically handles indented code blocks:
 
@@ -96,7 +100,7 @@ The extension automatically handles indented code blocks:
 - The extension also handles line continuations (backslash at the end of a line)
 - These formatting improvements ensure your code executes correctly within the PDB session
 
-### Debugging Workflow:
+### Debugging workflow
 
 1. Execute cells with `Ctrl+Alt+Enter` during normal development
 2. When you hit a breakpoint (using `pdb.set_trace()`, `breakpoint()`, etc.), switch to PDB mode with `Ctrl+Alt+,`
@@ -115,7 +119,7 @@ You can customize the extension's keyboard shortcuts through VS Code's keyboard 
 
 ## Troubleshooting
 
-### Terminal Not Found
+### Terminal not found
 
 If the extension can't find your IPython terminal:
 
@@ -123,10 +127,43 @@ If the extension can't find your IPython terminal:
 2. Run `ipython`
 3. Try executing your cell again
 
-### Execution Not Working
+### Execution not working
 
 Make sure:
 
 1. Your cursor is inside a Python cell
 2. IPython is properly installed in your environment
 3. Your code doesn't contain syntax errors
+
+## Development
+
+### Publishing updates to the VS Code Marketplace
+
+To publish a new version of this extension:
+
+1. **Update the version** in `package.json`:
+   ```json
+   "version": "0.2.8"
+   ```
+   Follow semantic versioning: MAJOR.MINOR.PATCH
+
+2. **Compile the extension**:
+   ```bash
+   npm run compile
+   ```
+
+3. **Publish to the marketplace**:
+   ```bash
+   vsce publish -p YOUR_PERSONAL_ACCESS_TOKEN
+   ```
+
+**About the Personal Access Token (PAT)**
+
+- The PAT is required for every publish operation (not just the initial one)
+- Get your PAT from Azure DevOps: https://dev.azure.com
+- The PAT must have **Marketplace (Manage)** scope
+
+**Publisher account**
+
+- Publisher: `agentmorris`
+- Manage extensions at: https://marketplace.visualstudio.com/manage/publishers/agentmorris

@@ -4,11 +4,13 @@
   "publisher": "agentmorris",
   "description": "Execute Python cells in IPython terminal with atomic execution",
   "version": "0.2.7",
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.99.0"
   },
   "categories": [
-    "Other"
+    "Programming Languages",
+    "Debuggers"
   ],
   "activationEvents": [
     "onLanguage:python"
@@ -182,9 +184,19 @@
     "type": "git",
     "url": "git+https://github.com/agentmorris/ipython-cell-executor.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "ipython",
+    "jupyter",
+    "python",
+    "cells",
+    "debugger",
+    "pdb",
+    "interactive",
+    "repl",
+    "notebook"
+  ],
+  "author": "Dan Morris <agentmorris+vscode@gmail.com>",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/agentmorris/ipython-cell-executor/issues"
   },
@@ -192,6 +204,7 @@
   "files": [
     "out/**",
     "README.md",
-    "package.json"
+    "package.json",
+    "icon.png"
   ]
 }
