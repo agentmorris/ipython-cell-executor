@@ -7,8 +7,9 @@ import * as os from 'os';
 // Add output channel for debugging
 const outputChannel = vscode.window.createOutputChannel('IPython Cell Executor');
 
-// Track pdb mode state
-let inPdbMode = false;
+// Track execution mode state
+type ExecutionMode = 'ipython' | 'runfile' | 'pdb';
+let executionMode: ExecutionMode = 'ipython';
 
 // Status bar item to show current mode
 let statusBarItem: vscode.StatusBarItem;
@@ -82,6 +83,45 @@ function getCellName(cellText: string): string | undefined {
         }
     }
     return undefined;
+}
+
+// Function to execute code using %run -i with a temporary file
+async function executeViaRunFile(code: string, terminal: vscode.Terminal, cellName?: string): Promise<void> {
+    outputChannel.appendLine('==== executeViaRunFile called ====');
+
+    const tmpDir = os.tmpdir();
+    const tmpFilePath = path.join(tmpDir, '_ipython_cell_exec.py');
+
+    try {
+        fs.writeFileSync(tmpFilePath, code);
+        outputChannel.appendLine(`Code written to temporary file: ${tmpFilePath}`);
+
+        // Display cell name as a comment if provided
+        if (cellName) {
+            outputChannel.appendLine(`Displaying cell name: ${cellName}`);
+            terminal.sendText(`# ${cellName}`, true);
+        }
+
+        // Use %run -i so the script runs in the interactive namespace
+        const escapedPath = tmpFilePath.replace(/\\/g, '\\\\');
+        outputChannel.appendLine(`Executing code with %run -i ${escapedPath}`);
+        terminal.sendText(`%run -i ${escapedPath}`, true);
+
+        // Return focus to editor after a short delay
+        setTimeout(() => {
+            if (vscode.window.activeTextEditor) {
+                vscode.window.showTextDocument(
+                    vscode.window.activeTextEditor.document,
+                    vscode.window.activeTextEditor.viewColumn
+                );
+            }
+        }, 300);
+    } catch (error) {
+        outputChannel.appendLine(`Error executing via run file: ${error}`);
+        vscode.window.showErrorMessage(`Error executing code: ${error}`);
+    }
+
+    outputChannel.appendLine('==== executeViaRunFile completed ====');
 }
 
 // Function to execute code using the clipboard and %paste -q (quiet mode)
@@ -221,10 +261,12 @@ async function executeCurrentCell() {
     terminal.show();
     
     // Execute differently based on mode
-    if (inPdbMode) {
-        outputChannel.appendLine('Using PDB mode execution (temp file) for cell');
-        // await executeThroughTempFileInPdb(codeToExecute, terminal);
+    if (executionMode === 'pdb') {
+        outputChannel.appendLine('Using PDB mode execution (line-by-line) for cell');
         await executeLineByLineInPdb(codeToExecute, terminal);
+    } else if (executionMode === 'runfile') {
+        outputChannel.appendLine('Using run file mode execution (%run -i) for cell');
+        await executeViaRunFile(codeToExecute, terminal, cellName);
     } else {
         // Regular execution via clipboard using %paste
         outputChannel.appendLine('Using standard IPython execution (clipboard) for cell');
@@ -472,43 +514,47 @@ async function executeCurrentSelection() {
                           !selectedText.trim().startsWith('for ') &&
                           !selectedText.trim().startsWith('while ');
     
-    if (inPdbMode) {
+    if (executionMode === 'pdb') {
         if (isSingleLine && isExpression) {
             // For single expressions in PDB mode, use direct line execution
             // This allows viewing variable values
             outputChannel.appendLine('Using direct execution for single expression in PDB mode');
             terminal.sendText(selectedText);
-            
+
             // Return focus to editor after a short delay
             setTimeout(() => {
                 if (vscode.window.activeTextEditor) {
                     vscode.window.showTextDocument(
-                        vscode.window.activeTextEditor.document, 
+                        vscode.window.activeTextEditor.document,
                         vscode.window.activeTextEditor.viewColumn
                     );
                 }
             }, 300);
         } else {
-            // For multi-line code in PDB mode, use exec()
-            outputChannel.appendLine('Using PDB mode execution (temp file)');
-            // await executeThroughTempFileInPdb(selectedText, terminal);
-			await executeLineByLineInPdb(selectedText, terminal);
+            // For multi-line code in PDB mode, use line-by-line
+            outputChannel.appendLine('Using PDB mode execution (line-by-line)');
+            await executeLineByLineInPdb(selectedText, terminal);
         }
     } else {
-        // In IPython mode, always use line-by-line
-        outputChannel.appendLine('Using standard IPython execution (line-by-line)');
+        // In IPython or Run File mode, use line-by-line for selections
+        outputChannel.appendLine('Using standard IPython execution (line-by-line) for selection');
         sendToIPythonTerminalLineByLine(selectedText, terminal);
     }
     
     outputChannel.appendLine('==== executeCurrentSelection completed ====');
 }
 
-// Function to toggle pdb mode
-function togglePdbMode() {
-    inPdbMode = !inPdbMode;
-    outputChannel.appendLine(`PDB mode ${inPdbMode ? 'enabled' : 'disabled'}`);
-    // No pop-up message, only status bar indicator
-    
+// Function to cycle execution mode: ipython -> runfile -> pdb -> ipython
+function toggleExecutionMode() {
+    if (executionMode === 'ipython') {
+        executionMode = 'runfile';
+    } else if (executionMode === 'runfile') {
+        executionMode = 'pdb';
+    } else {
+        executionMode = 'ipython';
+    }
+    outputChannel.appendLine(`Execution mode changed to: ${executionMode}`);
+
     // Update status bar to indicate current mode
     updateStatusBar();
 }
@@ -516,6 +562,7 @@ function togglePdbMode() {
 // Create and update status bar
 function createStatusBar(context: vscode.ExtensionContext) {
     statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+    statusBarItem.command = 'ipython-cell-executor.togglePdbMode';
     context.subscriptions.push(statusBarItem);
     updateStatusBar();
     statusBarItem.show();
@@ -523,10 +570,16 @@ function createStatusBar(context: vscode.ExtensionContext) {
 
 // Update status bar text based on mode
 function updateStatusBar() {
-    statusBarItem.text = inPdbMode ? "$(debug) PDB Mode" : "$(terminal) IPython Mode";
-    statusBarItem.tooltip = inPdbMode ? 
-        "Using file-based execution for PDB" : 
-        "Using line-by-line execution for IPython";
+    if (executionMode === 'pdb') {
+        statusBarItem.text = "$(debug) PDB Mode";
+        statusBarItem.tooltip = "Using line-by-line execution for PDB";
+    } else if (executionMode === 'runfile') {
+        statusBarItem.text = "$(remote) Run File Mode";
+        statusBarItem.tooltip = "Using %run -i with temp file (works on remote)";
+    } else {
+        statusBarItem.text = "$(terminal) IPython Mode";
+        statusBarItem.tooltip = "Using clipboard + %paste for IPython";
+    }
 }
 
 // Activate extension
@@ -546,8 +599,8 @@ export function activate(context: vscode.ExtensionContext) {
     );
     
     const toggleCommand = vscode.commands.registerCommand(
-        'ipython-cell-executor.togglePdbMode', 
-        togglePdbMode
+        'ipython-cell-executor.togglePdbMode',
+        toggleExecutionMode
     );
     
     // Add all commands to subscriptions
