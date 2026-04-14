@@ -98,7 +98,6 @@ Selection execution has smart behavior in PDB mode:
 4. When you exit PDB, switch back to regular mode with `Ctrl+Alt+,`
 5. All variables defined during PDB mode execution will be available in your debugging session
 
-
 ## Customization
 
 You can customize the extension's keyboard shortcuts through VS Code's keyboard shortcuts editor:

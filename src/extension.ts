@@ -92,8 +92,13 @@ async function executeViaRunFile(code: string, terminal: vscode.Terminal, cellNa
     const tmpDir = os.tmpdir();
     const tmpFilePath = path.join(tmpDir, '_ipython_cell_exec.py');
 
+    // Strip any common leading whitespace so a selection copied from inside
+    // an indented block (e.g. a function body) parses as valid top-level code.
+    // No-op for cells that already start at column 0.
+    const normalizedCode = normalizeIndentation(code);
+
     try {
-        fs.writeFileSync(tmpFilePath, code);
+        fs.writeFileSync(tmpFilePath, normalizedCode);
         outputChannel.appendLine(`Code written to temporary file: ${tmpFilePath}`);
 
         // Display cell name as a comment if provided
@@ -535,8 +540,17 @@ async function executeCurrentSelection() {
             outputChannel.appendLine('Using PDB mode execution (line-by-line)');
             await executeLineByLineInPdb(selectedText, terminal);
         }
+    } else if (executionMode === 'runfile') {
+        // Run File mode: normalize indentation before sending line-by-line.
+        // Unlike IPython mode (where IPython's %paste/input-transformer pipeline
+        // strips common leading whitespace), Run File mode relies on Python's
+        // parser seeing each line as valid top-level code, so we must dedent
+        // a selection ourselves.
+        outputChannel.appendLine('Using Run File mode execution (line-by-line, dedented) for selection');
+        const normalizedText = normalizeIndentation(selectedText);
+        sendToIPythonTerminalLineByLine(normalizedText, terminal);
     } else {
-        // In IPython or Run File mode, use line-by-line for selections
+        // IPython mode: send as-is; IPython's input transformers handle dedenting.
         outputChannel.appendLine('Using standard IPython execution (line-by-line) for selection');
         sendToIPythonTerminalLineByLine(selectedText, terminal);
     }
